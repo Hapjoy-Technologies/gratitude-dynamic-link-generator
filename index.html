@@ -94,6 +94,7 @@
           resultDiv.textContent = `Error: ${data.message}`;
         }
       } catch {
+        console.error('Error calling shorten API:', err);
         resultDiv.textContent = 'Network error, please try again.';
       }
     });
