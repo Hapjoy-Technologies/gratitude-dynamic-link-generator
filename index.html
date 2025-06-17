@@ -93,7 +93,7 @@
         } else {
           resultDiv.textContent = `Error: ${data.message}`;
         }
-      } catch {
+      } catch (err) {
         console.error('Error calling shorten API:', err);
         resultDiv.textContent = 'Network error, please try again.';
       }
