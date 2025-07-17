@@ -4,99 +4,200 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Gratitude URL Shortener</title>
+  <!-- Inter font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     body {
-      font-family: sans-serif;
-      text-align: center;
-      background: #f9f9f9;
-      color: #333;
+      font-family: 'Inter', sans-serif;
+      background: #f3f4f6;
       margin: 0;
-      padding: 0;
+      padding: 2rem;
     }
-    .container {
-      max-width: 500px;
-      margin: 5vh auto;
+    .card {
       background: #fff;
       padding: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      max-width: 480px;
+      margin: 0 auto 2rem;
     }
     h1 {
-      margin-bottom: 1rem;
       font-size: 1.5rem;
-    }
-    form {
-      display: flex;
-      flex-direction: column;
+      font-weight: 600;
+      color: #111827;
+      text-align: center;
+      margin-bottom: 1.5rem;
     }
     label {
-      text-align: left;
+      display: block;
       margin-top: 1rem;
-      font-weight: bold;
+      font-weight: 500;
+      color: #374151;
+      font-size: 0.95rem;
     }
     input {
-      padding: 0.5rem;
+      width: 100%;
+      padding: 0.75rem;
       margin-top: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
       font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      color: #111827;
+      box-sizing: border-box;
     }
     button {
-      margin-top: 1.5rem;
+      width: 100%;
+      margin-top: 1.75rem;
       padding: 0.75rem;
       font-size: 1rem;
-      background: #0070f3;
+      font-weight: 600;
+      background: #EA436B;
       color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: 24px;
       cursor: pointer;
+      transition: background 0.2s ease;
     }
     button:hover {
-      background: #005bb5;
+      background: #d63a64;
     }
     .result {
       margin-top: 1rem;
+      font-size: 0.95rem;
+      color: #1f2937;
+      text-align: center;
       word-break: break-all;
+    }
+    .result a {
+      color: #EA436B;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .result a:hover {
+      text-decoration: underline;
+    }
+    .table-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    }
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #f9fafb;
+      color: #4b5563;
+      font-weight: 600;
+    }
+    tr:nth-child(even) {
+      background: #f3f4f6;
+    }
+    a.short-link {
+      color: #EA436B;
+      text-decoration: none;
+    }
+    a.short-link:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="card">
     <h1>Gratitude URL Shortener</h1>
     <form id="shorten-form">
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text" placeholder="Daily Zen" required/>
+
       <label for="url">Long URL</label>
-      <input id="url" name="url" type="url" placeholder="https://example.com/..." required />
-      <label for="alias">Custom alias (optional)</label>
-      <input id="alias" name="alias" type="text" placeholder="alias123" />
+      <input id="url" name="url" type="url" placeholder="https://example.com/..." required/>
+
+      <label for="alias">Custom alias</label>
+      <input id="alias" name="alias" type="text" placeholder="dailyzen" required/>
+
       <button type="submit">Shorten URL</button>
     </form>
     <div id="result" class="result"></div>
   </div>
+
+  <div class="table-container">
+    <h2 style="text-align:center;font-weight:600;margin:1rem 0;">All Dynamic Links</h2>
+    <table id="links-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Short URL</th>
+          <th>Long URL</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
   <script>
-    const API_BASE = 'https://avhedfdhma.execute-api.us-east-1.amazonaws.com/prod/generateShortURL';
+    const SHORTEN_API = 'https://avhedfdhma.execute-api.us-east-1.amazonaws.com/prod/generateShortURL';
+    const LIST_API = 'https://avhedfdhma.execute-api.us-east-1.amazonaws.com/prod/listShortURLs';
+    const SHORT_BASE = 'https://fanciful-gaufre-b785b1.netlify.app';
+
+    const resultDiv = document.getElementById('result');
+    const tableBody = document.querySelector('#links-table tbody');
+
     document.getElementById('shorten-form').addEventListener('submit', async e => {
       e.preventDefault();
+      const name = e.target.name.value.trim();
       const url = e.target.url.value.trim();
-      const alias = e.target.alias.value.trim() || undefined;
-      const resultDiv = document.getElementById('result');
-      resultDiv.textContent = 'Processing...';
+      const alias = e.target.alias.value.trim();
+      resultDiv.textContent = 'Processing…';
+
       try {
-        const response = await fetch(API_BASE, {
+        const response = await fetch(SHORTEN_API, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, alias })
+          body: JSON.stringify({ url, alias, name })
         });
         const data = await response.json();
         if (response.ok) {
           resultDiv.innerHTML = `<a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a>`;
+          e.target.reset();
+          loadLinks(); // reload table
         } else {
           resultDiv.textContent = `Error: ${data.message}`;
         }
       } catch (err) {
-        console.error('Error calling shorten API:', err);
+        console.error('Error:', err);
         resultDiv.textContent = 'Network error, please try again.';
       }
     });
+
+    async function loadLinks() {
+      try {
+        const res = await fetch(LIST_API);
+        const data = await res.json();
+        tableBody.innerHTML = '';
+        (data.links || []).forEach(({ code, url, name }) => {
+          const shortUrl = `${SHORT_BASE}/${code}`;
+          const row = `<tr>
+            <td>${name || ''}</td>
+            <td><a class="short-link" href="${shortUrl}" target="_blank">${shortUrl}</a></td>
+            <td><a href="${url}" target="_blank">${url}</a></td>
+          </tr>`;
+          tableBody.insertAdjacentHTML('beforeend', row);
+        });
+      } catch (err) {
+        console.error('Failed to load links:', err);
+        tableBody.innerHTML = '<tr><td colspan="3">Error loading links</td></tr>';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadLinks);
   </script>
 </body>
 </html>
